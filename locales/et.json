@@ -1,0 +1,42 @@
+{
+    "menu" : {
+        "permTableTitle" : "Meisterdamislaud",
+        "tableTitle": "%s Meisterdamislaud",
+        "requiredItems" : "Nõutud Esemed",
+        "craft" : "Meisterda"
+    },
+
+    "textui" : {
+        "placeInstructions" : "[E] Paiguta Laud  \n[Kerimisnupp Üles/Alla] Pööra"
+    },
+
+    "notify" : {
+        "alreadyPlacing" : "Oled juba lauda paigutamas!",
+        "craftedItem" : "Edukalt meisterdasid %s",
+        "missingItems" : "Puuduvad vajalikud esemed!",
+        "missingBlueprint" : "Puudub %s",
+        "pickedupTable" : "Meisterdamislaud võetud",
+        "placedTable" : "Meisterdamislaud paigutatud",
+        "failedPlace" : "Meisterdamislauda ei õnnestunud võtta",
+        "placeInVehicle" : "Sõidukis olles ei saa esemeid paigutada",
+        "denyJob" : "Sul puudub õige grupp selle laua jaoks!",
+        "cancelledInput" : "Sisestamine Katkestatud",
+        "failedSkillCheck" : "Meisterdamine Ebaõnnestus"
+    },
+
+    "progress" : {
+        "picking_up_table": "Meisterdamislauda Võtmine",
+        "placingTable": "Meisterdamislauda Paigutamine",
+        "craftingItem" : "Meisterdab %s"
+    },
+
+    "dialog" : {
+        "amountTitle" : "Mitu soovid meisterdada?",
+        "amountLabel": "Meisterdamise Kogus"
+    },
+
+    "target" : {
+        "pickupCrafting" : "Võta Laud",
+        "openCrafting" : "Ava Meisterdamine"
+    }
+}
