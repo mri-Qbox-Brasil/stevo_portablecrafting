@@ -1,0 +1,42 @@
+{
+    "menu" : {
+        "permTableTitle" : "Mesa de Creación",
+        "tableTitle": "Mesa de Creación de %s",
+        "requiredItems" : "Objetos Requeridos",
+        "craft" : "Crear"
+    },
+
+    "textui" : {
+        "placeInstructions" : "[E] Colocar Mesa  \n[Scroll Arriba/Abajo] Rotar"
+    },
+
+    "notify" : {
+        "alreadyPlacing" : "¡Ya estás colocando una mesa!",
+        "craftedItem" : "Has creado exitosamente un %s",
+        "missingItems" : "¡Te faltan objetos requeridos!",
+        "missingBlueprint" : "Te falta %s",
+        "pickedupTable" : "Mesa de creación recogida",
+        "placedTable" : "Mesa de creación colocada",
+        "failedPlace" : "Error al recoger la mesa de creación",
+        "placeInVehicle" : "No puedes colocar objetos mientras estás en un vehículo",
+        "denyJob" : "¡No tienes el grupo requerido para esta mesa!",
+        "cancelledInput" : "Entrada Cancelada",
+        "failedSkillCheck" : "Fallo en la Creación"
+    },
+
+    "progress" : {
+        "picking_up_table": "Recogiendo Mesa de Creación",
+        "placingTable": "Colocando Mesa de Creación",
+        "craftingItem" : "Creando un %s"
+    },
+
+    "dialog" : {
+        "amountTitle" : "¿Cuántos quieres crear?",
+        "amountLabel": "Cantidad a Crear"
+    },
+
+    "target" : {
+        "pickupCrafting" : "Recoger Mesa",
+        "openCrafting" : "Abrir Creación"
+    }
+}

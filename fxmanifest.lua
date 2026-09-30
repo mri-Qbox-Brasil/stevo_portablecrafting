@@ -4,7 +4,7 @@ game 'gta5'
 
 author 'StevoScripts | steve'
 description 'Advanced Portable Crafting System with props, blueprints and more!'
-version '1.0.0'
+version '2.0.5'
 
 shared_scripts {
   'config.lua',
@@ -20,10 +20,13 @@ server_scripts {
 	'resource/server.lua'
 }
 
+files {
+  'locales/*.json'
+}
+
 dependencies {
   'ox_lib',
   'oxmysql',
-  'stevo_lib'
 }
 
 lua54 'yes'

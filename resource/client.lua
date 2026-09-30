@@ -1,17 +1,19 @@
-local Config = lib.require('config')
+if not lib.checkDependency('stevo_lib', '1.7.2') then error('stevo_lib 1.7.2 required for stevo_portablecrafting') end
+lib.locale()
+
+local config = lib.require('config')
 local stevo_lib = exports['stevo_lib']:import()
+local progress = config.progressCircle and lib.progressCircle or lib.progressBar
+local placingTable, currentlyCrafting, currentCraftingTable = false, false, {}
+local TableEntities, CraftingOptions = {}, {}
+local TABLE_CAM, craftableEntity
 
-local PLACING_TABLE = false
-local TABLE_POINTS = {}
-local CURRENT_TABLE, CRAFTING_OPTIONS, TABLE_CAM, CRAFTABLE_OBJ
-
-
-local function createTable(object, coords, heading)
+local function createTable(object, coords, heading, tabletype)
     DeleteObject(object)
 
-    lib.progressBar({
-        duration = 1000,
-        label = 'Placing Crafting Table',
+    progress({
+        duration = config.pickupPlaceDuration * 1000,
+        label = locale('progress.placingTable'),
         useWhileDead = false,
         canCancel = false,
         disable = {
@@ -22,31 +24,32 @@ local function createTable(object, coords, heading)
             dict = "pickup_object",
             clip = "pickup_low"
         },
-        prop = {
+        prop = config.pickupPlaceProp and {
             model = `prop_box_guncase_01a`,
             pos = vec3(0.12, 0.0, 0.0),
             rot = vec3(0.0, 0.0, 0.0),
             bone = 57005,
-        },
+        } or false,
     })
 
     
-    lib.callback.await('stevo_portablecrafting:createTable', false, coords, heading)
+    lib.callback.await('stevo_portablecrafting:createTable', false, coords, heading, tabletype)
 
-    stevo_lib.Notify(Config.locales.placed_crafting_table, 'info', 5000)
+    stevo_lib.Notify(locale('notify.placedTable'), 'info', 5000)
 end
 
-local function placeTable()
-    if PLACING_TABLE then
-        stevo_lib.Notify('Already placing a table', 'error', 5000)
+local function placeTable(tabletype)
+
+    if placingTable then
+        stevo_lib.Notify(locale("notify.alreadyPlacing"), 'error', 5000)
         return
     end
 
-    lib.requestModel(Config.craftingTable.model)
-      
+    local tableConfig = config.craftingTables[tabletype]
+    lib.requestModel(tableConfig.model)
+
     local _, _, endCoords, _ = lib.raycast.cam()
-  
-    local object = CreateObject(Config.craftingTable.model, endCoords.x, endCoords.y, endCoords.z, false, false, false)
+    local object = CreateObject(tableConfig.model, endCoords.x, endCoords.y, endCoords.z, false, false, false)
   
     SetEntityAlpha(object, 200)
     DisableCamCollisionForEntity(object)
@@ -54,8 +57,11 @@ local function placeTable()
     SetEntityDrawOutlineColor(10, 170, 210, 200)
     SetEntityDrawOutlineShader(0)
     SetEntityDrawOutline(object, true)
-    PLACING_TABLE = true
-    lib.showTextUI('[E] Place Table  \n[Scroll Up/Down] Rotate')
+
+    placingTable = true
+
+    lib.showTextUI(locale('textui.placeInstructions'))
+
     while true do
         _, _, endCoords, _ = lib.raycast.cam()
         SetEntityCoords(object, endCoords)
@@ -75,32 +81,60 @@ local function placeTable()
         end
     end
     PlaceObjectOnGroundProperly(object)
-    PLACING_TABLE = false
+    placingTable = false
     lib.hideTextUI()
-    createTable(object, GetEntityCoords(object), GetEntityHeading(object))
+    createTable(object, GetEntityCoords(object), GetEntityHeading(object), tabletype)
 end
 
 function craftItem(data)
-    DeleteObject(CRAFTABLE_OBJ)
-    local craftItem = lib.callback.await('stevo_portablecrafting:craftItem', false, data.item, data.craftable)
+    local craftAmount = 1
 
-    if craftItem == 1 then 
-        stevo_lib.Notify((Config.locales.no_blueprint):format(data.craftable.required_blueprint_label), 'error', 5000)
-    elseif craftItem == 2 then 
-        stevo_lib.Notify(Config.locales.missing_required_items, 'error', 5000)
-    else
-        stevo_lib.Notify((Config.locales.crafted_item):format(craftItem), 'info', 5000)
+    DeleteObject(craftableEntity)
+
+    if data.craftable.craftMultiple then 
+        local input = lib.inputDialog(locale("dialog.amountTitle"), {
+            {type = 'number', label = locale("dialog.amountLabel"), required = true, min = data.craftable.craftMin, max = data.craftable.craftMax},
+        })
+        if not input then stevo_lib.Notify(locale('notify.cancelledInput'), 'error', 3000) return lib.showContext('stevo_portablecrafting') end
+        
+        craftAmount = input[1]
     end
 
+    if data.craftable.minigame then 
+        local success = config.skillCheck(data.craftable.minigame)
+
+        if not success then 
+            stevo_lib.Notify(locale('notify.failedSkillCheck'), "error", 5000)
+            return lib.showContext('stevo_portablecrafting')
+        end
+    end
+
+    if data.craftable.timeToCraft then
+        if not progress({
+            duration = data.craftable.timeToCraft,
+            position = 'bottom',
+            label = (locale('progress.craftingItem'):format(data.craftable.name)),
+            useWhileDead = false,
+            canCancel = false,
+            disable = { move = true, car = true, mouse = false, combat = true, },
+        }) then    
+            return
+        end
+    end
+
+    local craftItemLocale, craftItem = lib.callback.await('stevo_portablecrafting:craftItem', false, data.item, craftAmount, currentCraftingTable)
+
+    stevo_lib.Notify(craftItemLocale, craftItem, 5000)
     lib.showContext('stevo_portablecrafting')
+
 end
 
-function pickupTable(entity)
+local function pickupTable(tableId, tableType)
 
     
-    lib.progressBar({
+    progress({
         duration = 1000,
-        label = 'Pickup Up Crafting Table',
+        label = locale('progress.picking_up_table'),
         useWhileDead = false,
         canCancel = false,
         disable = {
@@ -112,24 +146,25 @@ function pickupTable(entity)
             clip = "pickup_low"
         },
     })
-    print(CURRENT_TABLE.id)
     
-    local pickedupTable = lib.callback.await('stevo_portablecrafting:pickupTable', false, CURRENT_TABLE.id)
+    local pickedupTable = lib.callback.await('stevo_portablecrafting:pickupTable', false, tableId, tableType)
 
     if pickedupTable then 
-        stevo_lib.Notify(Config.locales.pickedup_crafting_table, 'info', 5000)
+        stevo_lib.Notify(locale('notify.pickedupTable'), 'info', 5000)
     else
-        stevo_lib.Notify(Config.locales.failed_to_pickup_crafting_table, 'info', 5000)
+        stevo_lib.Notify(locale('notify.failedPlace'), 'error', 5000)
     end
 end
 
-function toggleCam(toggle, obj)
+function toggleCam(toggle, coords, heading)
     if not toggle then
+        
         RenderScriptCams(false, true, 250, 1, 0)
         DestroyCam(TABLE_CAM, false)
-        FreezeEntityPosition(PlayerPedId(), false)
+        FreezeEntityPosition(cache.ped, false)
     else
-        local coords = GetOffsetFromEntityInWorldCoords(obj, 0, -0.75, 0)
+        SetEntityLocallyInvisible(cache.ped)
+        local coords = GetOffsetFromEntityInWorldCoords(TableEntities[currentCraftingTable.id], 0, -0.75, 0)
         RenderScriptCams(false, false, 0, 1, 0)
         DestroyCam(TABLE_CAM, false)
         FreezeEntityPosition(cache.ped, true)
@@ -137,199 +172,244 @@ function toggleCam(toggle, obj)
         SetCamActive(TABLE_CAM, true)
         RenderScriptCams(true, true, 250, 1, 0)
         SetCamCoord(TABLE_CAM, coords.x, coords.y, coords.z + 1.2)
-        SetCamRot(TABLE_CAM, 0.0, 0.0, GetEntityHeading(obj))
+        SetCamRot(TABLE_CAM, 0.0, 0.0, heading)
     end
 end
 
 function previewCraftable(data)
     lib.requestModel(data.craftable.model)
-    CRAFTABLE_OBJ = CreateObject(data.craftable.model, CURRENT_TABLE.coords.x, CURRENT_TABLE.coords.y, CURRENT_TABLE.coords.z + 1.1, true, false, true)
-    SetEntityHeading(CRAFTABLE_OBJ, GetEntityHeading(cache.ped) + 180)
-    lib.showContext('stevo_portablecrafting_'..data.item)
+    craftableEntity = CreateObject(data.craftable.model, currentCraftingTable.coords.x,  currentCraftingTable.coords.y, currentCraftingTable.coords.z + 1.1, true, false, true)
+    SetEntityHeading(craftableEntity, GetEntityHeading(cache.ped) + 180)
+    lib.showContext('stevo_portablecrafting_'..data.tabletype..'_'..data.item)
 end
 
-function registerCraftables(table)
+function registerCraftables()
     local options = {}
 
-    for i, craftable in pairs(Config.craftables) do 
-        local option =     {
-            title = craftable.name,
-            description = craftable.description,
-            icon = craftable.icon,
-            iconColor = craftable.iconColor,
-            args = {craftable = craftable, item = i},
-            onSelect = previewCraftable,
-        }
-        table.insert(options, option)
-
-        local requiredItems = {}
-        for _, item in ipairs(craftable.required_items) do
-            table.insert(requiredItems, item.amount .. 'x ' .. item.label)
+    for tabletype, tableData in pairs(config.craftingTables) do
+        if not options[tabletype] then
+            options[tabletype] = {}  
         end
+    
+        for i, craftable in pairs(tableData.craftables) do 
+            local option = {
+                title = craftable.name,
+                description = craftable.description,
+                icon = craftable.icon,
+                iconColor = craftable.iconColor,
+                args = {craftable = craftable, item = i, tabletype = tabletype},
+                onSelect = previewCraftable,
+            }
 
-        local secondaryOptions = { 
-            {
-                title = Config.locales.craftable_required_items,
-                icon = 'info-circle',
-                description = table.concat(requiredItems, ', '),
-            },
-            {
-                title = 'Craft',
-                arrow = true,
-                args = {craftable = craftable, item = i},
-                onSelect = craftItem
+            table.insert(options[tabletype], option)
+    
+            local requiredItems = {}
+            for _, item in ipairs(craftable.requiredItems) do
+                table.insert(requiredItems, item.amount .. 'x ' .. item.label)
+            end
+    
+            local secondaryOptions = { 
+                {
+                    title = locale('menu.requiredItems'),
+                    icon = 'info-circle',
+                    description = table.concat(requiredItems, ', '),
+                },
+                {
+                    title = locale('menu.craft'),
+                    arrow = true,
+                    args = {tabletype = tabletype, craftable = craftable, item = i},
+                    onSelect = craftItem
+                }
             }
-        }
-        if craftable.required_blueprint then 
-            local blueprintOption = {
-                title = craftable.required_blueprint_label,
-                icon = 'book',
-            }
-            table.insert(secondaryOptions, 1, blueprintOption)
+            
+            if craftable.blueprintRequired then 
+                local blueprintOption = {
+                    title = craftable.blueprintRequired_label,
+                    icon = 'book',
+                }
+                table.insert(secondaryOptions, 1, blueprintOption)
+            end
+    
+            lib.registerContext({
+                id =  'stevo_portablecrafting_'..tabletype..'_'..i,
+                title = craftable.name,
+                menu = 'stevo_portablecrafting',
+                onBack = function()
+                    DeleteObject(craftableEntity)
+                end,
+                canClose = false,
+                options = secondaryOptions
+            })
+    
         end
-
-        lib.registerContext({
-            id =  'stevo_portablecrafting_'..i,
-            title = craftable.name,
-            menu = 'stevo_portablecrafting',
-            onBack = function()
-                DeleteObject(CRAFTABLE_OBJ)
-            end,
-            canClose = false,
-            options = secondaryOptions
-
-        })
-
     end
-
+    
     return options
 end
 
-function openCraftingMenu(entity)
-    local table = CURRENT_TABLE
+local function isAllowed(groups)
+    local job, gang = stevo_lib.GetPlayerGroups()
+    local groupAuth = false
+
+    for _, group in pairs (groups) do
+        
+        if group == job then 
+            groupAuth = true
+        end
+
+        if gang then
+            if group == gang then 
+                groupAuth = true
+            end
+        end
+
+    end
+
+    return groupAuth
+end
+
+local function openCraftingMenu(table)
+    
+    if table.groups then 
+        if not isAllowed(table.groups) then 
+            stevo_lib.Notify(locale("notify.denyJob"), 'error', 5000)
+            return 
+        end
+    elseif config.craftingTables[table.type].groups then 
+        if not isAllowed(config.craftingTables[table.type].groups) then 
+            stevo_lib.Notify(locale("notify.denyJob"), 'error', 5000)
+            return 
+        end
+    end
+
 
     lib.registerContext({
         id =  'stevo_portablecrafting',
         onExit = function()
+            currentlyCrafting = false
+            currentCraftingTable = {}
             toggleCam(false)
         end,
         title = table.name,
-        options = CRAFTING_OPTIONS
+        options = CraftingOptions[table.type]
     })
 
     lib.showContext('stevo_portablecrafting')
+    currentlyCrafting = true
 
-    toggleCam(true, entity)
+    CreateThread(function()
+        while currentlyCrafting do 
+            SetEntityLocallyInvisible(cache.ped)
+            Wait(0)
+        end
+    end)
+
+    toggleCam(true, table.coords, table.heading)
 end
 
-function enterTablePoint(self)
-    lib.requestModel(Config.craftingTable.model)
-    self.table = CreateObject(Config.craftingTable.model, self.table_coords, true)
-    FreezeEntityPosition(self.table, true)
-    SetEntityHeading(self.table, self.table_heading)
-
+local function initTable(table)
     local options = {
-        options = {
+        options = not table.permanent and {
             {
-                icon = Config.interaction.targeticon,
-                label = Config.interaction.targetLabel,
-                distance = Config.interaction.targetdistance,
-                num = 1,
-                action = openCraftingMenu,
+                name = 'open_table',
+                type = "client",
+                action = function() 
+                    currentCraftingTable = table
+                    openCraftingMenu(table) 
+                end,
+                icon = config.interaction.openCraftingIcon,
+                label = locale("target.openCrafting"),
             },
             {
-                icon = Config.interaction.deleteTargeticon,
-                label = Config.interaction.deleteTargetLabel,
-                num = 2,
-                distance = Config.interaction.targetdistance,
-                action = pickupTable,
-            },
+                name = 'pickup_table',
+                type = "client",
+                action = function() 
+
+                    pickupTable(table.id, table.type) 
+                end,
+                icon = config.interaction.pickupTableOption,
+                label = locale("target.pickupCrafting"),
+            } 
+        } or {
+            {
+                name = 'open_table',
+                type = "client",
+                action = function() 
+                    currentCraftingTable = table
+                    openCraftingMenu(table) 
+                end,
+                icon = config.interaction.openCraftingIcon,
+                label = locale("target.openCrafting"),
+            }
         },
-        distance = 5,
-        rotation = vec3(0.0,0.0,0.0)
-
+        distance = config.interaction.interactDistance,
+        rotation = 45
     }
-    stevo_lib.target.AddTargetEntity(self.table, options)
+    stevo_lib.target.AddBoxZone('stevoportablecrafting'..table.id, vec3(table.coords.x, table.coords.y, table.coords.z), vec3(3, 3, 3), options)  
 
-    CURRENT_TABLE = {
-        entity = self.table,
-        name = self.table_name,
-        coords = self.table_coords,
-        id = self.table_id
-    }
-end
- 
-function exitTablePoint(self)
-    if CURRENT_TABLE.id == self.table_id then 
-        CURRENT_TABLE = {} 
-    end
-    DeleteEntity(self.table)
+
+    local tableModel = config.craftingTables[table.type].model
+
+    lib.requestModel(tableModel)
+    TableEntities[table.id] = CreateObject(tableModel, table.coords.x, table.coords.y, table.coords.z, false)
+    SetEntityHeading(TableEntities[table.id], table.heading)
+    FreezeEntityPosition(TableEntities[table.id], true)
+    SetModelAsNoLongerNeeded(tableModel)
 end
 
-function on_player_loaded()
-    CRAFTING_OPTIONS = registerCraftables(table)
+local function onPlayerLoaded()
+    CraftingOptions = registerCraftables()
     local tables = lib.callback.await('stevo_portablecrafting:loadTables', false)
     
+
     for i, table in pairs(tables) do 
-        TABLE_POINTS[table.id] = lib.points.new({
-            coords = table.coords,
-            distance = 10,
-            table_id = table.id,
-            table_name = table.name,
-            table_coords = vec3(table.coords.x, table.coords.y, table.coords.z),
-            table_heading = table.heading,
-            onEnter = enterTablePoint,
-            onExit = exitTablePoint
-        })
+        initTable(table)
     end
 end
 
-exports('usetable', function()
-    if not IsPedInAnyVehicle(PlayerPedId(), true) then
-        placeTable()
-    else
-        stevo_lib.Notify(Config.locales.no_placing_in_vehicle, 'error', 5000)
+RegisterNetEvent('stevo_portablecrafting:itemUsed', function(tabletype)
+    if cache.vehicle then
+        return stevo_lib.Notify(locale('notify.placeInVehicle'), 'error', 5000)
     end
+        
+    placeTable(tabletype)
 end)
 
-RegisterNetEvent('stevo_portablecrafting:networkSync', function(action, tables, action_data)
+RegisterNetEvent('stevo_portablecrafting:networkSync', function(action, tableId, table)
     if action == 'delete' then 
-        TABLE_POINTS[action_data]:onExit()
-        TABLE_POINTS[action_data]:remove()
+        stevo_lib.target.RemoveZone('stevoportablecrafting'..tableId)
+
+        local tableEntity = TableEntities[tableId]
+
+        if DoesEntityExist(tableEntity) then
+            DeleteEntity(tableEntity)
+        end
     elseif action == 'create' then 
-        TABLE_POINTS[action_data.id] = lib.points.new({
-            coords = action_data.coords,
-            distance = 10,
-            table_id = action_data.id,
-            table_name = action_data.name,
-            table_coords = vec3(action_data.coords.x, action_data.coords.y, action_data.coords.z),
-            table_heading = action_data.heading,
-            onEnter = enterTablePoint,
-            onExit = exitTablePoint,
-            debug = true,
-        })
+        initTable(table)
     end
 end)
 
 AddEventHandler('stevo_lib:playerLoaded', function()
-    on_player_loaded()
+    onPlayerLoaded()
 end)
 
-AddEventHandler('onResourceStop', function(resourceName)
-    if (GetCurrentResourceName() ~= resourceName) then
-      return
-    end
-    for _, point in pairs(TABLE_POINTS) do
-        TABLE_POINTS[_]:onExit()
-        TABLE_POINTS[_]:remove()
+AddEventHandler('onResourceStop', function(resource)
+    if cache.resource ~= resource then return end
+
+    for entityId, entity in pairs(TableEntities) do
+
+        if DoesEntityExist(entity) then
+            DeleteEntity(entity)
+        end
+
+        stevo_lib.target.RemoveZone('stevoportablecrafting'..entityId)
     end
 end)
 
-AddEventHandler('onResourceStart', function(resourceName)
-    if (GetCurrentResourceName() ~= resourceName) then
-      return
-    end
-    on_player_loaded()
+AddEventHandler('onResourceStart', function(resource)
+    if cache.resource ~= resource then return end
+
+    onPlayerLoaded()
 end)
 
 

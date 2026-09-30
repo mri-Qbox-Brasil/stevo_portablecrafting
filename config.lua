@@ -1,82 +1,105 @@
 return {
 
     saveToDatabase = true,
+    dropCheaters = true, -- If cheaters should be kicked.
+    progressCircle = false, -- If lib progressCircle should be used instead of progressBar
 
-    craftingTable = {
-        item = 'stevo_craftingtable',
-        model = 'gr_prop_gr_bench_02b'
-    },
+    pickupPlaceDuration = 1, -- Seconds it takes to pickup/place the tables
+    pickupPlaceProp = true, -- If a prop should display when placing/picking up tables
 
-
-    blueprints = {
-        ['stevo_blueprintexample'] = 2, -- Blueprint item name & uses.
-    },
-
-    craftables = {
-        ['WEAPON_PISTOL'] = {
-            model = 'w_pi_pistol', 
-            name = 'Pistol',
-            icon = 'gun',
-            iconColor = '#339af0',
-            description = 'A compact, semi-automatic handgun designed for personal defense and close-quarters combat.',
+    craftingTables = {
+        ['weap_craftingtable'] = { -- TableType, use the name of the table item
             
-            required_items = {
-                {label = 'Water Bottle', item = 'water', amount = 1},
-            },
-            required_blueprint = 'stevo_exampleblueprint', -- Set to false for no blueprint requirement.
-            required_blueprint_label = 'Blue Print Example',
+            model = 'gr_prop_gr_bench_04b',
+            groups = {'ambulance'}, -- Gang or job roles required to open.
 
+            craftables = {
+                ['WEAPON_PISTOL'] = {
+                    model = 'w_pi_pistol', 
+                    name = 'Pistol',
+                    icon = 'gun',
+                    iconColor = '#339af0',
+                    description = 'A compact, semi-automatic handgun designed for personal defense and close-quarters combat.',
+                    
+                    requiredItems = {
+                        {label = 'Steel', item = 'steel', amount = 1},
+                        {label = 'Copper', item = 'copper', amount = 1}
+                    },
+                    blueprintRequired = 'stevo_exampleblueprint', -- Set to false for no blueprint requirement.
+                    blueprintRequired_label = 'Blue Print Example',
+                    craftMultiple = true,
+                    craftMax = 10,
+                    craftMin = 1,
+                    increment = 1,
+                    timeToCraft = 2000
+
+                }
+            },
         },
-        ['WEAPON_CARBINERIFLE'] = {
-            model = 'w_ar_carbinerifle', 
+        ['item_craftingtable'] = { -- TableType, use the name of the table item
+            
+            model = 'gr_prop_gr_bench_02a',
+            groups = false, 
 
-            name = 'Carbine Rifle',     
-            icon = 'gun',  
-            iconColor = '#339af0',
-            description = 'A versatile, automatic or semi-automatic firearm engineered for rapid-fire and high accuracy at mid range.',
+            craftables = {
+                ['veh_toolbox'] = {
+                    model = 'v_ind_cs_toolbox4', 
+                    name = 'Toolbox',
+                    icon = 'toolbox',
+                    iconColor = '#339af0',
+                    description = 'A sturdy, portable container for storing and organizing tools. Ideal for mechanics, craftsmen, and DIY enthusiasts.',
+                    
+                    requiredItems = {
+                        {label = 'Plastic', item = 'plastic', amount = 1},
+                        {label = 'Steel', item = 'steel', amount = 1}
+                    },
+                    timeToCraft = 2000,
+                    blueprintRequired = false,
+                    craftMultiple = false
 
-            required_items = {
-                {label = 'Water Bottle', item = 'water', amount = 1},
+                },
+                ['laptop'] = {
+                    model = 'ex_prop_ex_laptop_01a', 
+                    name = 'Laptop',
+                    icon = 'laptop',
+                    iconColor = '#339af0',
+                    description = 'A high-performance laptop equipped with the latest technology, perfect for work, gaming, and browsing. Lightweight and portable for on-the-go use.',
+                    
+                    requiredItems = {
+                        {label = 'Plastic', item = 'plastic', amount = 1},
+                        {label = 'Steel', item = 'steel', amount = 1},
+                        {label = 'Iron', item = 'iron', amount = 1}
+                    },
+                    timeToCraft = 2000,
+                    minigame = {{'easy', 'easy', {areaSize = 60, speedMultiplier = 2}, 'hard'}},
+                    blueprintRequired = false,
+                    craftMultiple = false
+
+                },
             },
-            required_blueprint = false, -- Set to false for no blueprint requirement.
-            required_blueprint_label = '',
+        }
+    },
+
+    permCraftingTables = { -- Set to false if you dont want any tables.
+        {
+            type = 'item_craftingtable', 
+            coords = vec4(-260.4243, 6313.0981, 36.6173, 131.9714),
+            groups = {'ambulance'}, -- Gang or job roles required to open.
         },
-        ['water'] = {
-            model = 'prop_ld_flow_bottle', 
-
-            name = 'Bottled Water',     
-            icon = 'bottle-water',  
-            iconColor = '#339af0',
-            description = 'A bottle of water!.',
-
-            required_items = {
-                {label = 'Water Bottle', item = 'water', amount = 1},
-            },
-            required_blueprint = false, -- Set to false for no blueprint requirement.
-            required_blueprint_label = '',
+        {
+            type = 'item_craftingtable', 
+            coords = vec4(-264.4575, 6317.9434, 36.6173, 134.8024)
         }
     },
 
     interaction = { 
-
-        targetLabel = 'Open Crafting',
-        deleteTargetLabel = 'Pickup Table',
-        targetradius = 3.0, 
-        targeticon = 'fas fa-screwdriver-wrench', -- https://fontawesome.com/icons
-        deleteTargeticon = 'fas fa-x', -- https://fontawesome.com/icons
-        targetdistance = 2.0,
+        openCraftingIcon = 'fas fa-screwdriver-wrench', -- https://fontawesome.com/icons
+        pickupTableOption = 'fas fa-x', -- https://fontawesome.com/icons
+        interactDistance = 2.0,
     },
 
-    locales = {
-        no_placing_in_vehicle = 'You cannot place items while in a vehicle',
-        placed_crafting_table = 'Placed crafting table',
-        pickedup_crafting_table = 'Picked up crafting table',
-        failed_to_pickup_crafting_table = 'Failed to pickup crafting table',
-
-        craftable_required_items = 'Required Items',
-        no_blueprint = 'You are missing %s',
-        missing_required_items = 'You are missing required items!',
-        crafted_item = 'Successfully crafted a %s'
-    },
+    skillCheck = function(data)
+        return lib.skillCheck(data[1])
+    end,
     
 }

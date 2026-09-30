@@ -1,0 +1,42 @@
+{
+    "menu" : {
+        "permTableTitle" : "Knutseltafel",
+        "tableTitle": "%s's Knutseltafel",
+        "requiredItems" : "Vereiste Items",
+        "craft" : "Maak"
+    },
+
+    "textui" : {
+        "placeInstructions" : "[E] Tafel Plaatsen  \n[Scroll Omhoog/Omlaag] Draaien"
+    },
+
+    "notify" : {
+        "alreadyPlacing" : "Je bent al een tafel aan het plaatsen!",
+        "craftedItem" : "Succesvol een %s gemaakt",
+        "missingItems" : "Je mist vereiste items!",
+        "missingBlueprint" : "Je mist %s",
+        "pickedupTable" : "Knutseltafel opgepakt",
+        "placedTable" : "Knutseltafel geplaatst",
+        "failedPlace" : "Mislukt om knutseltafel op te pakken",
+        "placeInVehicle" : "Je kunt geen items plaatsen in een voertuig",
+        "denyJob" : "Je hebt niet de juiste groep voor deze tafel!",
+        "cancelledInput" : "Invoer Geannuleerd",
+        "failedSkillCheck" : "Mislukt om te Knutselen"
+    },
+
+    "progress" : {
+        "picking_up_table": "Knutseltafel Oppakken",
+        "placingTable": "Knutseltafel Plaatsen",
+        "craftingItem" : "Maakt een %s"
+    },
+
+    "dialog" : {
+        "amountTitle" : "Hoeveel wil je maken?",
+        "amountLabel": "Aantal om te Maken"
+    },
+
+    "target" : {
+        "pickupCrafting" : "Tafel Oppakken",
+        "openCrafting" : "Open Knutselen"
+    }
+}
